@@ -24,19 +24,12 @@
 #include <SoftwareSerial.h>
 #include <Jack.h>
 
-//class SoftwareSerial;
+//---COSTANTI---
+#define MESSAGE_START_CHARACTER '<' //carattere di inzio messaggio
+#define MESSAGE_FINISH_CHARACTER '>' //carattere di fine messaggio
 
-//class JTrasmissionMethod;
 
 class SoftwareSerialJack : public JTrasmissionMethod {
-
-	private:
-		
-		SoftwareSerial * softwareSerial;
-		String messageBuffer;
-		
-		static char MESSAGE_START_CHARACTER; //carattere inzio messaggio
-		static char MESSAGE_FINISH_CHARACTER; //carattere fine messaggio
 
 	public:
 	
@@ -46,7 +39,13 @@ class SoftwareSerialJack : public JTrasmissionMethod {
 		String receive(); //deve restituire il messaggio da passare a Jack
 		void send(String message); //invia il messaggio
 		
-		int available(); //restituisce true se ci sono dati da elaborare
+		uint8_t available(); //restituisce true se ci sono dati da elaborare
+
+
+	private:
+		
+		SoftwareSerial *softwareSerial;
+		String messageBuffer;
 
 };
 
