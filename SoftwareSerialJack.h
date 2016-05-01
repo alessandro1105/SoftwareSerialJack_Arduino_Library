@@ -31,7 +31,7 @@
 #define SSJ_BUFFER_SIZE = 255;
 
 
-class SoftwareSerialJack : public JTrasmissionMethod {
+class SoftwareSerialJack : public JTransmissionMethod {
 
 	public:
 	
