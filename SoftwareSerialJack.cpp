@@ -22,88 +22,158 @@
 #include <Jack.h>
 
 
-SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate) {
-	
-	messageBuffer = "";
-	
-	softwareSerial = new SoftwareSerial(RX, TX);
-	
-	softwareSerial->begin(baudRate);
+//---PUBLIC---
 
+//costruttore con la scelta della dimensione del buffer
+SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate, int bufferSize) {
+	
+	//istanzio Software Serial
+	_serial = new SoftwareSerial(RX, TX);
+	_serial->begin(baudRate);
+
+	//inizializzo il buffer
+	bufferInitialize(bufferSize);
 }
 
+
+//costruttore senza la scelta della dimensione del buffer
+SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate): SoftwareSerialJack(RX, TX, baudRate, SSJ_BUFFER_SIZE) {}
+
+
+//distruttore
 SoftwareSerialJack::~SoftwareSerialJack() {
-	
+		
+	//elimino l'istanza di SoftwareSerial
 	delete softwareSerial;
+
+	//dsitruggo il buffer
+	bufferDestroy();
 	
 }
 
-void SoftwareSerialJack::send(String message) { //invia il messaggio
 
-	String messageToSend = String(MESSAGE_START_CHARACTER);
-	
-	messageToSend += message;
-	
-	messageToSend += String(MESSAGE_FINISH_CHARACTER);
-	
-	Serial.println(messageToSend);
-	
-	softwareSerial->print(messageToSend);
+//metodo di send
+void SoftwareSerialJack::send(char *message, int length) { //invia il messaggio
+
+	//invio il carattere di inzio messaggio
+	_serial.print(SSJ_MESSAGE_START_CHARACTER);
+
+	//invio il messaggio
+	for (int i = 0; i < length; i++) {
+		_serial.print(message[i]);
+	}
+
+	//invio il carattere di fine messaggio
+	_serial.print(SSJ_MESSAGE_FINISH_CHARACTER);
 	
 }
 
-int SoftwareSerialJack::available() { //restituisce true se ci sono dati da elaborare
 
-    while (softwareSerial->available() > 0) { //scarico i caratteri ricevuti nel buffer
-	
-		messageBuffer += char(softwareSerial->read());
-	  
+//metodo per verificare se sono presenti messaggi nel buffer
+uint8_t SoftwareSerialJack::available() { //restituisce true se ci sono dati da elaborare
+
+	//finchè ci sono caratteri in entrata e posizioni libere nel buffer
+    while (_serial->available() && bufferAvailable() ) {
+		bufferPut(_serial.read());
     }
-	
-	return 1;
-	
+
+ 	//restituisco la dimensione del buffer
+ 	return bufferLength();
+
 }
 
-String SoftwareSerialJack::receive() { //deve restituire il messaggio da passare a Jack
-		
-	String message = ""; //variabile che conterra il messaggio da restituire
-		
-	int nCharIncorrect = 0; //caratteri incorretti all'inizio
-	int nCharMessage = 0; //caratteri del mesaggio
-			
-	//controllo che non ci siani caratteri non validi prima del messaggio (mi fermo quando trovo il char di inizio)
-	for(int i = 0; i < messageBuffer.length() && messageBuffer.charAt(i) != MESSAGE_START_CHARACTER; i++) {
-				
-		nCharIncorrect++;
-			
-	}					
-	
-	messageBuffer = messageBuffer.substring(nCharIncorrect);
 
-	
-	if (messageBuffer.length() > 0 && messageBuffer.charAt(0) == MESSAGE_START_CHARACTER) { //messaggio con almeno 1 carattere e primo carattere è il carattere di inizio messaggio
-				
-		for (int i = 1; i < messageBuffer.length() && messageBuffer.charAt(i) != MESSAGE_FINISH_CHARACTER; i++) {
-			nCharMessage++;
-				
-			message += messageBuffer.charAt(i);
-				
-		}
-				
-				
-		if ((nCharMessage + 2) <= messageBuffer.length() && messageBuffer.charAt(nCharMessage + 2 - 1) == MESSAGE_FINISH_CHARACTER) {
-					
-			//E' presente un messaggio
-			messageBuffer = messageBuffer.substring(nCharMessage + 2); //elimino dal bufffer il messaggio
-					
+//metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
+int SoftwareSerialJack::receive(char *buffer, int size) {
+
+	int position = 0; //imposto la posizione all'interno del buffer di ritorno
+
+	//elimino tutti i caratteri finchè non trovo il carattere di inzio messaggio
+	while (bufferLength() && bufferGet() != SSJ_MESSAGE_START_CHARACTER) {}
+
+	//se sono rimasti caratteri nel buffer
+	if (bufferLength()) {
+
+		//finchè ci sono caratteri nel buffer e non viene raggiunta la dimensione del buffer di ritorno o il carattere di fine
+		//inserisco i caratteri nel buffer di ritorno
+
+		while (bufferLength() && position < size && (buffer[position++] = bufferGet()) != SSJ_MESSAGE_FINISH_CHARACTER) {}
+
+		//se è stato trovato il carattere di fine
+		if (buffer[position -1] == SSJ_MESSAGE_FINISH_CHARACTER) {
+			return position -1; //ritorno la posizione
+		
+		//altrimenti
 		} else {
-					
-			message = ""; //non è presente un messaggio azzero il messaggio da restituire
-					
+			return 0;
 		}
-				
-	} //fine prelievo messaggio
-		
-	return message; //restituisco il messaggio o stringa vuota}
+
+
+	}
+	
+}
+
+
+//---PRIVATE---
+
+//---gestione del buffer circolare---
+
+//pulisce il buffer
+void SoftwareSerialJack::bufferInitialize(int size) {
+
+	//creo il buffer
+	_buffer = (char *) malloc(bufferSize * sizeof(char)); //alloco la memoria
+	_buffer[0] = 0; //inserisco la fine del buffer
+
+	//imposto la dimensione del buffer
+	_size = size;
+	//posizione di testa
+	_position = 0;
+	//numero di elementi
+	_length = 0;
 
 }
+
+//inserisce il dato nel buffer (0 buffer pieno, 1= successo)
+void SoftwareSerialJack::bufferPut(char c) {
+
+	//se il buffer ha spazio disponibile
+	if (_length < size) {
+		_buffer[(_position + _length++) % _size] = c; //salvo il dato
+	}
+
+}
+
+//restituisce il dato alla posizione corrente
+char SoftwareSerialJack::bufferGet() {
+
+	//se il buffer ha qualcosa di memorizzato
+	if (_length > 0) {
+
+		char c = _buffer[_position]; //recupero il dato memorizzato
+
+		//aggiorno la posizione di testa
+		_position = _position++ % _size;
+
+		return c; //ritorno il dato salvato
+	}
+
+}
+
+//restituisce il numero di posizioni libere
+int SoftwareSerialJack::bufferAvailable() {
+	return _size - _length;
+}
+
+//restituisce il numero di elementi memorizzati nel buffer
+int SoftwareSerialJack::bufferLength() {
+	return _length;
+}
+
+//distrugge il buffer e libera la memoria
+void SoftwareSerialJack::bufferDestroy() {
+
+	//libero la memoria allocata dal buffer
+	free(_buffer);
+}
+

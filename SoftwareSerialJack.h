@@ -17,37 +17,53 @@
    @url            https://github.com/alessandro1105
 */
 
-#ifndef __SOFTWARE_SERIAL_JACK_H__
-#define __SOFTWARE_SERIAL_JACK_H__
+#ifndef SOFTWARESERIALJACK_H
+#define SOFTWARESERIALJACK_H
 
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <Jack.h>
 
 //---COSTANTI---
-#define MESSAGE_START_CHARACTER '<' //carattere di inzio messaggio
-#define MESSAGE_FINISH_CHARACTER '>' //carattere di fine messaggio
+#define SSJ_MESSAGE_START_CHARACTER '<' //carattere di inzio messaggio
+#define SSJ_MESSAGE_FINISH_CHARACTER '>' //carattere di fine messaggio
+
+#define SSJ_BUFFER_SIZE = 255;
 
 
 class SoftwareSerialJack : public JTrasmissionMethod {
 
 	public:
 	
-		SoftwareSerialJack(int RX, int TX, long baudRate);
+		SoftwareSerialJack(int RX, int TX, long baudRate, int bufferSize); //construttore con la scelta della dimensione del buffer
+		SoftwareSerialJack(int RX, int TX, long baudRate); //costruttore senza la scelta del buffer
 		~SoftwareSerialJack();
 		
-		String receive(); //deve restituire il messaggio da passare a Jack
-		void send(String message); //invia il messaggio
+		int receive(char *buffer, int size); //metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
+		void send(char *message, int length); //invia il messaggio
 		
-		uint8_t available(); //restituisce true se ci sono dati da elaborare
+		uint8_t available(); //restituisce la dimensione del buffer (>0 se ci sono messagi)
 
 
 	private:
+
+		void bufferInitialize(int size); //pulisce il buffer
+		void bufferPut(char c); //inserisce il dato nel buffer (0 buffer pieno, 1= successo)
+		char bufferGet(); //restituisce il dato alla posizione corrente
+		int bufferAvailable(); //restituisce il numero di posizioni libere
+		int bufferLength(); //restituisce il numero di elementi memorizzati nel buffer
+		void bufferDestroy(); //distrugge il buffer e libera la memoria
+
+
+		SoftwareSerial *_serial; //istanza della classe SoftwareSerial
 		
-		SoftwareSerial *softwareSerial;
-		String messageBuffer;
+		//gestione del buffer
+		char *_buffer; //puntatore al buffer
+		int _size; //dimensione del buffer
+		int _position; //posizione di testa del buffer
+		int _length; //quantità di dati memorizzati nel buffer
 
 };
 
 
-#endif
+#endif //SOFTWARESERIALJACK_H
