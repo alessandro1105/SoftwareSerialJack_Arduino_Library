@@ -35,19 +35,19 @@ class SoftwareSerialJack : public JTransmissionMethod {
 
 	public:
 	
-		SoftwareSerialJack(int RX, int TX, long baudRate, int bufferSize); //construttore con la scelta della dimensione del buffer
+		SoftwareSerialJack(int RX, int TX, long baudRate, size_t bufferSize); //construttore con la scelta della dimensione del buffer
 		SoftwareSerialJack(int RX, int TX, long baudRate); //costruttore senza la scelta del buffer
 		~SoftwareSerialJack();
 		
-		int receive(char *buffer, int size); //metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
-		void send(char *message, int length); //invia il messaggio
+		int receive(char *buffer, size_t size); //metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
+		void send(char *message, size_t length); //invia il messaggio
 		
 		uint8_t available(); //restituisce la dimensione del buffer (>0 se ci sono messagi)
 
 
 	private:
 
-		void bufferInitialize(int size); //pulisce il buffer
+		void bufferInitialize(size_t size); //pulisce il buffer
 		void bufferPut(char c); //inserisce il dato nel buffer (0 buffer pieno, 1= successo)
 		char bufferGet(); //restituisce il dato alla posizione corrente
 		int bufferAvailable(); //restituisce il numero di posizioni libere

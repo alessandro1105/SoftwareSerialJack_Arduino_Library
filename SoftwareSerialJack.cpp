@@ -25,7 +25,7 @@
 //---PUBLIC---
 
 //costruttore con la scelta della dimensione del buffer
-SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate, int bufferSize) {
+SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate, size_t bufferSize) {
 	
 	//istanzio Software Serial
 	_serial = new SoftwareSerial(RX, TX);
@@ -53,7 +53,7 @@ SoftwareSerialJack::~SoftwareSerialJack() {
 
 
 //metodo di send
-void SoftwareSerialJack::send(char *message, int length) { //invia il messaggio
+void SoftwareSerialJack::send(char *message, size_t length) { //invia il messaggio
 
 	//invio il carattere di inzio messaggio
 	_serial.print(SSJ_MESSAGE_START_CHARACTER);
@@ -84,7 +84,7 @@ uint8_t SoftwareSerialJack::available() { //restituisce true se ci sono dati da 
 
 
 //metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
-int SoftwareSerialJack::receive(char *buffer, int size) {
+int SoftwareSerialJack::receive(char *buffer, size_t size) {
 
 	int position = 0; //imposto la posizione all'interno del buffer di ritorno
 
@@ -101,10 +101,19 @@ int SoftwareSerialJack::receive(char *buffer, int size) {
 
 		//se è stato trovato il carattere di fine
 		if (buffer[position -1] == SSJ_MESSAGE_FINISH_CHARACTER) {
-			return position -1; //ritorno la posizione
+
+			//inserisco il carattere di terminazione di stringa
+			buffer[position -1] = 0;
+
+			//ritorno la lunghezza del messaggio
+			return position -1;
 		
 		//altrimenti
 		} else {
+
+			//inserisco il carattere di terminazione di stringa all'inzio perchè il messaggio non è valido
+			buffer[0] = 0;
+
 			return 0;
 		}
 
@@ -119,7 +128,7 @@ int SoftwareSerialJack::receive(char *buffer, int size) {
 //---gestione del buffer circolare---
 
 //pulisce il buffer
-void SoftwareSerialJack::bufferInitialize(int size) {
+void SoftwareSerialJack::bufferInitialize(size_t size) {
 
 	//creo il buffer
 	_buffer = (char *) malloc(bufferSize * sizeof(char)); //alloco la memoria
