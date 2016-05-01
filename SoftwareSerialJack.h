@@ -22,7 +22,7 @@
 
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include <Jack.h>
+#include <JTransmissionMethod.h>
 
 //---COSTANTI---
 #define SSJ_MESSAGE_START_CHARACTER '<' //carattere di inzio messaggio
