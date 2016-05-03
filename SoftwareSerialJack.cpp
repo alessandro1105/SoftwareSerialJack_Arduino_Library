@@ -102,7 +102,8 @@ size_t SoftwareSerialJack::receive(char *buffer, size_t size) {
 	int position = 0; //imposto la posizione all'interno del buffer di ritorno
 
 	//elimino tutti i caratteri finchè non trovo il carattere di inzio messaggio
-	while (bufferLength() && bufferGet() != SSJ_MESSAGE_START_CHARACTER) {}
+	while (bufferLength() && bufferGet() != SSJ_MESSAGE_START_CHARACTER)
+		;
 
 	//se sono rimasti caratteri nel buffer
 	if (bufferLength()) {
@@ -110,7 +111,8 @@ size_t SoftwareSerialJack::receive(char *buffer, size_t size) {
 		//finchè ci sono caratteri nel buffer e non viene raggiunta la dimensione del buffer di ritorno o il carattere di fine
 		//inserisco i caratteri nel buffer di ritorno
 
-		while (bufferLength() && position < size && (buffer[position++] = bufferGet()) != SSJ_MESSAGE_FINISH_CHARACTER) {}
+		while (bufferLength() && position < size && (buffer[position++] = bufferGet()) != SSJ_MESSAGE_FINISH_CHARACTER)
+			;
 
 		//se è stato trovato il carattere di fine
 		if (buffer[position -1] == SSJ_MESSAGE_FINISH_CHARACTER) {
