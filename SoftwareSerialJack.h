@@ -28,7 +28,7 @@
 #define SSJ_MESSAGE_START_CHARACTER '<' //carattere di inzio messaggio
 #define SSJ_MESSAGE_FINISH_CHARACTER '>' //carattere di fine messaggio
 
-#define SSJ_BUFFER_SIZE = 255;
+#define SSJ_BUFFER_SIZE 255
 
 
 class SoftwareSerialJack : public JTransmissionMethod {
@@ -37,12 +37,14 @@ class SoftwareSerialJack : public JTransmissionMethod {
 	
 		SoftwareSerialJack(int RX, int TX, long baudRate, size_t bufferSize); //construttore con la scelta della dimensione del buffer
 		SoftwareSerialJack(int RX, int TX, long baudRate); //costruttore senza la scelta del buffer
+		SoftwareSerialJack(Stream &serial, size_t bufferSize);
+		SoftwareSerialJack(Stream &serial); //costruttore
 		~SoftwareSerialJack();
 		
-		int receive(char *buffer, size_t size); //metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
+		size_t receive(char *buffer, size_t size); //metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
 		void send(char *message, size_t length); //invia il messaggio
 		
-		uint8_t available(); //restituisce la dimensione del buffer (>0 se ci sono messagi)
+		size_t available(); //restituisce la dimensione del buffer (>0 se ci sono messagi)
 
 
 	private:
@@ -55,7 +57,7 @@ class SoftwareSerialJack : public JTransmissionMethod {
 		void bufferDestroy(); //distrugge il buffer e libera la memoria
 
 
-		SoftwareSerial *_serial; //istanza della classe SoftwareSerial
+		Stream *_serial; //istanza della classe SoftwareSerial
 		
 		//gestione del buffer
 		char *_buffer; //puntatore al buffer

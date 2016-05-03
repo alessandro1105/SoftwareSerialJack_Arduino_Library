@@ -18,8 +18,7 @@
 */
   
 #include <Arduino.h>
-#include <SoftwareSerial.h>
-#include <Jack.h>
+#include <SoftwareSerialJack.h>
 
 
 //---PUBLIC---
@@ -29,7 +28,7 @@ SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate, size_t buf
 	
 	//istanzio Software Serial
 	_serial = new SoftwareSerial(RX, TX);
-	_serial->begin(baudRate);
+	((SoftwareSerial *) _serial)->begin(baudRate);
 
 	//inizializzo il buffer
 	bufferInitialize(bufferSize);
@@ -40,11 +39,25 @@ SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate, size_t buf
 SoftwareSerialJack::SoftwareSerialJack(int RX, int TX, long baudRate): SoftwareSerialJack(RX, TX, baudRate, SSJ_BUFFER_SIZE) {}
 
 
+//costruttore
+SoftwareSerialJack::SoftwareSerialJack(Stream &serial, size_t bufferSize) {
+
+	//salvo lo stream passato
+	_serial = &serial;
+
+	//inizializzo il buffer
+	bufferInitialize(bufferSize);
+}
+
+//costruttore
+SoftwareSerialJack::SoftwareSerialJack(Stream &serial):SoftwareSerialJack(serial, SSJ_BUFFER_SIZE) {}
+
+
 //distruttore
 SoftwareSerialJack::~SoftwareSerialJack() {
 		
 	//elimino l'istanza di SoftwareSerial
-	delete softwareSerial;
+	delete _serial;
 
 	//dsitruggo il buffer
 	bufferDestroy();
@@ -56,25 +69,25 @@ SoftwareSerialJack::~SoftwareSerialJack() {
 void SoftwareSerialJack::send(char *message, size_t length) { //invia il messaggio
 
 	//invio il carattere di inzio messaggio
-	_serial.print(SSJ_MESSAGE_START_CHARACTER);
+	_serial->print(SSJ_MESSAGE_START_CHARACTER);
 
 	//invio il messaggio
 	for (int i = 0; i < length; i++) {
-		_serial.print(message[i]);
+		_serial->print(message[i]);
 	}
 
 	//invio il carattere di fine messaggio
-	_serial.print(SSJ_MESSAGE_FINISH_CHARACTER);
+	_serial->print(SSJ_MESSAGE_FINISH_CHARACTER);
 	
 }
 
 
 //metodo per verificare se sono presenti messaggi nel buffer
-uint8_t SoftwareSerialJack::available() { //restituisce true se ci sono dati da elaborare
+size_t SoftwareSerialJack::available() { //restituisce true se ci sono dati da elaborare
 
 	//finchè ci sono caratteri in entrata e posizioni libere nel buffer
     while (_serial->available() && bufferAvailable() ) {
-		bufferPut(_serial.read());
+		bufferPut(_serial->read());
     }
 
  	//restituisco la dimensione del buffer
@@ -84,7 +97,7 @@ uint8_t SoftwareSerialJack::available() { //restituisce true se ci sono dati da 
 
 
 //metodo che inserisce il messaggio in un buffer e restituisce la dimensione del messaggio
-int SoftwareSerialJack::receive(char *buffer, size_t size) {
+size_t SoftwareSerialJack::receive(char *buffer, size_t size) {
 
 	int position = 0; //imposto la posizione all'interno del buffer di ritorno
 
@@ -131,7 +144,7 @@ int SoftwareSerialJack::receive(char *buffer, size_t size) {
 void SoftwareSerialJack::bufferInitialize(size_t size) {
 
 	//creo il buffer
-	_buffer = (char *) malloc(bufferSize * sizeof(char)); //alloco la memoria
+	_buffer = (char *) malloc(size * sizeof(char)); //alloco la memoria
 	_buffer[0] = 0; //inserisco la fine del buffer
 
 	//imposto la dimensione del buffer
@@ -147,7 +160,7 @@ void SoftwareSerialJack::bufferInitialize(size_t size) {
 void SoftwareSerialJack::bufferPut(char c) {
 
 	//se il buffer ha spazio disponibile
-	if (_length < size) {
+	if (_length < _size) {
 		_buffer[(_position + _length++) % _size] = c; //salvo il dato
 	}
 
@@ -162,7 +175,8 @@ char SoftwareSerialJack::bufferGet() {
 		char c = _buffer[_position]; //recupero il dato memorizzato
 
 		//aggiorno la posizione di testa
-		_position = _position++ % _size;
+		_position = ++_position % _size;
+		_length--;
 
 		return c; //ritorno il dato salvato
 	}
